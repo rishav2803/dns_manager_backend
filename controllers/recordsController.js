@@ -8,6 +8,8 @@ const client = require("../helpers/route53");
 
 async function updateDomainRecord(
   domainId,
+  domainName,
+  oldRecordName,
   recordName,
   recordType,
   recordValue,
@@ -23,9 +25,20 @@ async function updateDomainRecord(
       ChangeBatch: {
         Changes: [
           {
-            Action: "UPSERT",
+            Action: "DELETE",
             ResourceRecordSet: {
-              Name: recordName,
+              Name: oldRecordName
+                ? `${oldRecordName}.${domainName}`
+                : domainName,
+              Type: recordType,
+              TTL: ttl,
+              ResourceRecords: resourceRecords,
+            },
+          },
+          {
+            Action: "CREATE",
+            ResourceRecordSet: {
+              Name: recordName ? `${recordName}.${domainName}` : domainName,
               Type: recordType,
               TTL: ttl,
               ResourceRecords: resourceRecords,
@@ -35,7 +48,6 @@ async function updateDomainRecord(
       },
       HostedZoneId: domainId,
     };
-
     const command = new ChangeResourceRecordSetsCommand(params);
     const data = await client.send(command);
 
@@ -53,7 +65,15 @@ async function updateDomainRecord(
 
 module.exports.updateRecord = async (req, res) => {
   try {
-    const { domainId, recordName, type, values, ttl } = req.body;
+    const {
+      domainId,
+      recordName,
+      oldRecordName,
+      domainName,
+      type,
+      values,
+      ttl,
+    } = req.body;
     console.log(
       "Updating domain record:",
       domainId,
@@ -65,6 +85,8 @@ module.exports.updateRecord = async (req, res) => {
 
     const result = await updateDomainRecord(
       domainId,
+      domainName,
+      oldRecordName,
       recordName,
       type,
       values,
@@ -102,7 +124,10 @@ module.exports.createRecords = async (req, res) => {
             {
               Action: "CREATE",
               ResourceRecordSet: {
-                Name: `${recordName}.${domainName}`,
+                Name:
+                  recordName !== ""
+                    ? `${recordName}.${domainName}`
+                    : domainName,
                 Type: type,
                 TTL: ttl,
                 ResourceRecords: resourceRecords,
@@ -119,7 +144,8 @@ module.exports.createRecords = async (req, res) => {
         if (data.ChangeInfo && data.ChangeInfo.Id) {
           console.log("Record created successfully:", data.ChangeInfo.Id);
           successRes.push({
-            name: `${recordName}.${domainName}`,
+            name:
+              recordName !== "" ? `${recordName}.${domainName}` : domainName,
             type: type,
             value: value,
             ttl: ttl,
@@ -236,7 +262,8 @@ async function createDomainRecord(
           {
             Action: "CREATE",
             ResourceRecordSet: {
-              Name: `${recordName}.${domainName}`,
+              Name:
+                recordName !== "" ? `${recordName}.${domainName}` : domainName,
               Type: recordType,
               TTL: ttl,
               ResourceRecords: [
@@ -282,7 +309,10 @@ module.exports.createRecord = async (req, res) => {
 
     res.status(200).json({
       msg: {
-        name: `${mssg.recordName}.${domainName}`,
+        name:
+          mssg.recordName !== ""
+            ? `${mssg.recordName}.${domainName}`
+            : domainName,
         type: mssg.type,
         ttl: mssg.ttl,
         value: mssg.value,
