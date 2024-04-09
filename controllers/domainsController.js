@@ -95,7 +95,7 @@ module.exports.createSingleDomain = async (req, res) => {
       CallerReference: `userID_${user_id}_${Date.now()}`,
       HostedZoneConfig: {
         Comment: desc || " ",
-        PrivateZone: type === "Public" ? false : true,
+        PrivateZone: type.toLowerCase() === "public" ? false : true,
       },
     };
 
@@ -152,7 +152,7 @@ module.exports.createDomain = async (req, res) => {
         CallerReference: `userID_${user_id}_${Date.now()}`,
         HostedZoneConfig: {
           Comment: desc || " ",
-          PrivateZone: type === "Public" ? false : true,
+          PrivateZone: type.toLowerCase() === "public" ? false : true,
         },
       };
 
